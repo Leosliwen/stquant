@@ -60,9 +60,19 @@ function filterPayload() {
 
 async function loadCandidates() {
   $("candidateMeta").textContent = "查询中...";
+  $("candidateSummary").innerHTML = "";
   const data = await postJson("/api/candidates", filterPayload());
   candidates = data.rows;
   $("candidateMeta").textContent = `共 ${candidates.length} 只`;
+  if (candidates.length) {
+    const top = candidates[0];
+    $("candidateSummary").innerHTML = `
+      <div><span>首位股票</span>${top.code} ${top.name}</div>
+      <div><span>首位分数</span>${format(top.total_score, 1)}</div>
+      <div><span>首位现价</span>${format(top.latest_close_raw, 2)}</div>
+      <div><span>候选数量</span>${candidates.length}</div>
+    `;
+  }
   renderTable("candidateTable", candidates, [
     { key: "code", label: "代码" },
     { key: "name", label: "名称" },
@@ -82,6 +92,7 @@ async function loadCandidates() {
     { key: "debt_asset_ratio", label: "负债率", format: (v) => format(v, 2) + "%" },
     { key: "total_score", label: "总分", format: (v) => format(v, 1) },
   ]);
+  $("candidateTable").parentElement.parentElement.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function backtestPayload() {
