@@ -128,17 +128,41 @@ th { background: #f0f3f7; position: sticky; top: 0; z-index: 1; }
   margin-top: 14px;
 }
 
-.summary div {
+.summary div,
+.statusCard {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px 12px;
   min-width: 140px;
 }
 
-.summary span {
+.summary span,
+.statusCard span {
   display: block;
   color: var(--muted);
   font-size: 12px;
+}
+
+.statusGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.statusCard.ok {
+  border-color: #49a078;
+  background: #f0fbf6;
+}
+
+.statusCard.bad {
+  border-color: #d1495b;
+  background: #fff3f4;
+}
+
+.statusCard strong {
+  display: block;
+  margin-top: 4px;
 }
 
 .chart {

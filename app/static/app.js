@@ -118,6 +118,51 @@ async function downloadBars() {
   }
 }
 
+function renderDataHealth(data) {
+  const agent = data.qmt_agent || {};
+  const cards = [
+    {
+      label: "ClickHouse 数据库",
+      ok: Boolean(data.clickhouse),
+      detail: data.clickhouse ? "可访问" : "不可访问",
+    },
+    {
+      label: "Windows qmt_agent",
+      ok: Boolean(agent.ok),
+      detail: agent.ok ? "可访问" : (agent.error || "不可访问"),
+    },
+    {
+      label: "miniQMT 行情接口",
+      ok: Boolean(agent.qmt),
+      detail: agent.qmt ? "可访问" : (agent.error || "不可访问"),
+    },
+  ];
+  $("dataHealthStatus").innerHTML = cards.map((card) => `
+    <div class="statusCard ${card.ok ? "ok" : "bad"}">
+      <span>${card.label}</span>
+      <strong>${card.ok ? "正常" : "异常"}</strong>
+      <small>${card.detail}</small>
+    </div>
+  `).join("");
+}
+
+async function testDataHealth() {
+  $("dataHealthStatus").innerHTML = '<div class="statusCard"><span>连通性测试</span><strong>测试中...</strong></div>';
+  try {
+    const resp = await fetch("/api/health");
+    const data = await resp.json();
+    renderDataHealth(data);
+    $("downloadStatus").textContent = JSON.stringify(data, null, 2);
+  } catch (err) {
+    $("dataHealthStatus").innerHTML = `
+      <div class="statusCard bad">
+        <span>连通性测试</span>
+        <strong>异常</strong>
+        <small>${String(err)}</small>
+      </div>`;
+  }
+}
+
 async function saveLive() {
   const payload = {
     enabled: $("liveEnabled").checked,
@@ -133,11 +178,14 @@ async function saveLive() {
 $("filterBtn").addEventListener("click", loadCandidates);
 $("backtestBtn").addEventListener("click", runBacktest);
 $("backtestSelectedBtn").addEventListener("click", runBacktest);
+$("dataHealthBtn").addEventListener("click", testDataHealth);
 $("downloadBtn").addEventListener("click", downloadBars);
 $("saveLiveBtn").addEventListener("click", saveLive);
 $("healthBtn").addEventListener("click", async () => {
   const resp = await fetch("/api/health");
-  alert(JSON.stringify(await resp.json(), null, 2));
+  const data = await resp.json();
+  renderDataHealth(data);
+  alert(JSON.stringify(data, null, 2));
 });
 
 loadCandidates().catch((err) => {
