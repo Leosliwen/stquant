@@ -133,10 +133,19 @@ button.secondary { background: var(--accent-2); }
 
 .tableWrap {
   overflow: auto;
-  max-height: 460px;
+  max-height: 520px;
   border: 1px solid var(--line);
   border-radius: 8px;
   margin-top: 14px;
+  overscroll-behavior: contain;
+}
+
+.candidateWrap {
+  max-height: 620px;
+}
+
+.candidateWrap .tableWrap {
+  max-height: 540px;
 }
 
 table {
