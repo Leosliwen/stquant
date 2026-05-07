@@ -56,6 +56,15 @@ cd D:\gjzqqmt\python_scripts\qmt_agent
 D:\gjzqqmt\qmt_env\python.exe .\qmt_agent.py
 ```
 
+For daily use, double-click:
+
+```text
+D:\gjzqqmt\python_scripts\qmt_agent\toggle_qmt_agent.bat
+```
+
+If port `8710` is free it starts the agent. If port `8710` is already
+listening it stops the process on that port.
+
 If ClickHouse is in WSL but exposed on Windows localhost, the default
 `127.0.0.1:9000` works. Otherwise set:
 
