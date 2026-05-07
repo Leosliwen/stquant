@@ -180,7 +180,9 @@ function activateTab(tabId) {
     btn.classList.toggle("active", btn.dataset.tab === tabId);
   });
   document.querySelectorAll(".tabPage").forEach((page) => {
-    page.classList.toggle("active", page.id === tabId);
+    const isActive = page.id === tabId;
+    page.classList.toggle("active", isActive);
+    page.hidden = !isActive;
   });
 }
 

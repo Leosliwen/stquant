@@ -64,6 +64,10 @@ main {
   display: none;
 }
 
+.tabPage[hidden] {
+  display: none !important;
+}
+
 .tabPage.active {
   display: block;
 }
