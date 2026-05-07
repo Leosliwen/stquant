@@ -27,8 +27,8 @@ def health() -> dict[str, Any]:
 
 def filter_candidates(params: FilterParams) -> list[dict[str, Any]]:
     client = get_client()
-    positive_profit_sql = "AND f.net_profit_parent > 0" if params.require_positive_profit else ""
-    positive_cash_sql = "AND f.operating_cash_flow > 0" if params.require_positive_operating_cash_flow else ""
+    positive_profit_sql = "AND net_profit_parent > 0" if params.require_positive_profit else ""
+    positive_cash_sql = "AND operating_cash_flow > 0" if params.require_positive_operating_cash_flow else ""
     query = f"""
     WITH latest_fin AS
     (
