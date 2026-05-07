@@ -17,6 +17,13 @@
   </header>
 
   <main>
+    <nav class="tabs" aria-label="STQuant sections">
+      <button class="tab active" data-tab="backtestPage">回测</button>
+      <button class="tab" data-tab="downloadPage">数据下载</button>
+      <button class="tab" data-tab="livePage">实盘交易</button>
+    </nav>
+
+    <div id="backtestPage" class="tabPage active">
     <section class="panel">
       <h2>股票筛选</h2>
       <div class="grid controls">
@@ -61,7 +68,9 @@
         <table id="stockResultTable"></table>
       </div>
     </section>
+    </div>
 
+    <div id="downloadPage" class="tabPage">
     <section class="panel">
       <h2>数据下载</h2>
       <div class="grid controls">
@@ -77,7 +86,9 @@
       <div id="dataHealthStatus" class="statusGrid"></div>
       <pre id="downloadStatus"></pre>
     </section>
+    </div>
 
+    <div id="livePage" class="tabPage">
     <section class="panel">
       <h2>实盘交易</h2>
       <p class="meta">第一版仅保存配置和预留接口，默认 dry-run。正式下单前需要再加账户、风控、撤单和成交回报确认。</p>
@@ -90,6 +101,7 @@
       <div class="actions"><button id="saveLiveBtn">保存实盘配置</button></div>
       <pre id="liveStatus"></pre>
     </section>
+    </div>
   </main>
 
   <script src="/static/app.js"></script>

@@ -175,6 +175,19 @@ async function saveLive() {
   $("liveStatus").textContent = JSON.stringify(await postJson("/api/live/config", payload), null, 2);
 }
 
+function activateTab(tabId) {
+  document.querySelectorAll(".tab").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.tab === tabId);
+  });
+  document.querySelectorAll(".tabPage").forEach((page) => {
+    page.classList.toggle("active", page.id === tabId);
+  });
+}
+
+document.querySelectorAll(".tab").forEach((btn) => {
+  btn.addEventListener("click", () => activateTab(btn.dataset.tab));
+});
+
 $("filterBtn").addEventListener("click", loadCandidates);
 $("backtestBtn").addEventListener("click", runBacktest);
 $("backtestSelectedBtn").addEventListener("click", runBacktest);

@@ -38,6 +38,36 @@ main {
   padding: 22px;
 }
 
+.tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+}
+
+.tab {
+  background: transparent;
+  color: var(--muted);
+  border-radius: 6px 6px 0 0;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  height: 40px;
+}
+
+.tab.active {
+  background: #ffffff;
+  color: var(--text);
+  border-color: var(--line);
+}
+
+.tabPage {
+  display: none;
+}
+
+.tabPage.active {
+  display: block;
+}
+
 .panel {
   background: var(--panel);
   border: 1px solid var(--line);
