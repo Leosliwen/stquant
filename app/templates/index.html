@@ -30,9 +30,19 @@
         <label>最低价 <input id="minPrice" type="number" step="0.1" value="3.0"></label>
         <label>最高价 <input id="maxPrice" type="number" step="0.1" value="5.5"></label>
         <label>20日成交额下限 <input id="minAmount" type="number" step="1000000" value="30000000"></label>
+        <label>60日成交额下限 <input id="minAmount60" type="number" step="1000000" value="20000000"></label>
+        <label>20日换手率下限 <input id="minTurnover20" type="number" step="0.1" value="0.5"></label>
+        <label>60日振幅下限 <input id="minAmplitude60" type="number" step="0.1" value="1.5"></label>
+        <label>60日波动率下限 <input id="minVolatility60" type="number" step="0.1" value="1.0"></label>
         <label>3年价格分位上限 <input id="maxPosition" type="number" step="0.05" value="0.45"></label>
+        <label>120日涨跌幅下限 <input id="minReturn120" type="number" step="1" value="-35"></label>
+        <label>120日涨跌幅上限 <input id="maxReturn120" type="number" step="1" value="35"></label>
+        <label>1年最大回撤上限 <input id="maxDrawdown1y" type="number" step="1" value="55"></label>
+        <label>连续下跌上限 <input id="maxConsecutiveDown" type="number" step="1" value="5"></label>
+        <label>最少上市年限 <input id="minListingYears" type="number" step="0.1" value="3.0"></label>
         <label>负债率上限 <input id="maxDebt" type="number" step="1" value="75"></label>
         <label>ROE下限 <input id="minRoe" type="number" step="0.5" value="0"></label>
+        <label>单行业上限 <input id="maxPerIndustry" type="number" step="1" value="8"></label>
         <label>数量 <input id="limit" type="number" step="10" value="200"></label>
         <label class="check"><input id="positiveProfit" type="checkbox" checked> 净利润为正</label>
         <label class="check"><input id="positiveCash" type="checkbox"> 经营现金流为正</label>
@@ -45,6 +55,7 @@
       <div class="tableWrap">
         <table id="candidateTable"></table>
       </div>
+      <p class="meta">评分 = 低位分 30% + 流动性分 20% + 波动分 20% + 基本面分 20% - 风险惩罚 20%。</p>
     </section>
 
     <section class="panel">

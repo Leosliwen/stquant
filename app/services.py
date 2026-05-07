@@ -44,39 +44,153 @@ def filter_candidates(params: FilterParams) -> list[dict[str, Any]]:
             argMax(bps, report_date) AS bps
         FROM stock_financial_summary
         GROUP BY code
+    ),
+    latest_days AS
+    (
+        SELECT code, max(trade_day) AS latest_trade_day
+        FROM stock_1d
+        WHERE close_raw IS NOT NULL
+        GROUP BY code
+    ),
+    daily_features AS
+    (
+        SELECT
+            b.code AS code,
+            b.name AS name,
+            b.prefix AS prefix,
+            b.open_date AS open_date,
+            argMax(d.close_raw, d.trade_day) AS latest_close_raw,
+            argMax(d.close_front, d.trade_day) AS latest_close_front,
+            ld.latest_trade_day AS latest_trade_day,
+            avgIf(d.amount, d.trade_day >= ld.latest_trade_day - 20) AS avg_amount_20d,
+            avgIf(d.amount, d.trade_day >= ld.latest_trade_day - 60) AS avg_amount_60d,
+            avgIf(d.turnover, d.trade_day >= ld.latest_trade_day - 20) AS avg_turnover_20d,
+            avgIf((d.high_raw - d.low_raw) / nullIf(d.close_raw, 0) * 100, d.trade_day >= ld.latest_trade_day - 60) AS avg_amplitude_60d,
+            stddevSampIf(d.change_pct, d.trade_day >= ld.latest_trade_day - 60) AS volatility_60d,
+            min(d.low_front) AS low_front_3y,
+            max(d.high_front) AS high_front_3y,
+            minIf(d.low_front, d.trade_day >= ld.latest_trade_day - 365) AS low_front_1y,
+            maxIf(d.high_front, d.trade_day >= ld.latest_trade_day - 365) AS high_front_1y,
+            argMinIf(d.close_raw, abs(dateDiff('day', d.trade_day, ld.latest_trade_day - 120)), d.trade_day <= ld.latest_trade_day) AS close_120d_ago,
+            (latest_close_raw - close_120d_ago) / nullIf(close_120d_ago, 0) * 100 AS return_120d,
+            (high_front_1y - latest_close_front) / nullIf(high_front_1y, 0) * 100 AS drawdown_1y,
+            (latest_close_front - low_front_3y) / nullIf(high_front_3y - low_front_3y, 0) AS price_position_3y,
+            countIf(d.trade_day >= ld.latest_trade_day - 20 AND d.change_pct < 0) AS down_days_20d,
+            countIf(d.trade_day >= ld.latest_trade_day - 20 AND d.change_pct <= -4.5) AS big_down_days_20d
+        FROM stock_basic AS b
+        INNER JOIN stock_1d AS d ON b.code = d.code
+        INNER JOIN latest_days AS ld ON b.code = ld.code
+        WHERE d.close_raw IS NOT NULL
+        GROUP BY b.code, b.name, b.prefix, b.open_date, ld.latest_trade_day
+    ),
+    down_streak AS
+    (
+        SELECT
+            code,
+            countIf(change_pct < 0) AS consecutive_down_days
+        FROM
+        (
+            SELECT
+                code,
+                trade_day,
+                change_pct,
+                sum(if(change_pct >= 0 OR change_pct IS NULL, 1, 0)) OVER (PARTITION BY code ORDER BY trade_day DESC) AS non_down_seen
+            FROM stock_1d
+            WHERE close_raw IS NOT NULL
+        )
+        WHERE non_down_seen = 0
+        GROUP BY code
+    ),
+    sector_one AS
+    (
+        SELECT
+            code,
+            anyIf(sector_name, sector_type = 'industry') AS industry
+        FROM stock_sector_map
+        GROUP BY code
+    ),
+    scored AS
+    (
+        SELECT
+        d.code AS code,
+        d.name,
+        d.prefix,
+        d.open_date,
+        d.latest_close_raw,
+        d.latest_close_front,
+        d.latest_trade_day,
+        d.avg_amount_20d,
+        d.avg_amount_60d,
+        d.avg_turnover_20d,
+        d.avg_amplitude_60d,
+        d.volatility_60d,
+        d.low_front_3y,
+        d.high_front_3y,
+        d.low_front_1y,
+        d.high_front_1y,
+        d.close_120d_ago,
+        d.return_120d,
+        d.drawdown_1y,
+        d.price_position_3y,
+        d.down_days_20d,
+        d.big_down_days_20d,
+        s.industry,
+        ifNull(ds.consecutive_down_days, 0) AS consecutive_down_days,
+            f.latest_report_date AS report_date,
+            f.revenue,
+            f.net_profit_parent,
+            f.operating_cash_flow,
+            f.roe,
+            f.debt_asset_ratio,
+            f.eps_basic,
+            f.bps,
+            dateDiff('day', d.open_date, d.latest_trade_day) / 365.0 AS listing_years,
+            greatest(0, least(30, (1 - d.price_position_3y) * 30)) AS low_position_score,
+            greatest(0, least(20, (d.avg_amount_20d / 100000000) * 12 + (d.avg_turnover_20d / 3) * 8)) AS liquidity_score,
+            greatest(0, least(20, (d.avg_amplitude_60d / 5) * 12 + (d.volatility_60d / 4) * 8)) AS volatility_score,
+            greatest(0, least(20,
+                ifNull(if(f.net_profit_parent > 0, 5, 0), 0) +
+                ifNull(if(f.operating_cash_flow > 0, 4, 0), 0) +
+                greatest(0, least(5, ifNull(f.roe, 0) / 10 * 5)) +
+                greatest(0, least(4, (80 - ifNull(f.debt_asset_ratio, 80)) / 80 * 4)) +
+                ifNull(if(f.bps > d.latest_close_raw, 2, 0), 0)
+            )) AS fundamental_score,
+            greatest(0, least(20,
+                if(consecutive_down_days > 3, (consecutive_down_days - 3) * 2, 0) +
+                if(d.return_120d < -20, 5, 0) +
+                if(d.drawdown_1y > 45, 5, 0) +
+                if(d.latest_close_raw < 2.5, 4, 0) +
+                if(d.big_down_days_20d >= 2, 4, 0)
+            )) AS risk_penalty
+        FROM daily_features AS d
+        LEFT JOIN latest_fin AS f ON d.code = f.code
+        LEFT JOIN sector_one AS s ON d.code = s.code
+        LEFT JOIN down_streak AS ds ON d.code = ds.code
     )
     SELECT
-        c.code,
-        c.name,
-        c.prefix,
-        c.latest_close_raw,
-        c.latest_close_front,
-        c.latest_trade_day,
-        c.avg_amount_20d,
-        c.low_front_3y,
-        c.high_front_3y,
-        c.price_position_3y,
-        f.latest_report_date AS report_date,
-        f.revenue,
-        f.net_profit_parent,
-        f.operating_cash_flow,
-        f.roe,
-        f.debt_asset_ratio,
-        f.eps_basic,
-        f.bps
-    FROM v_grid_low_price_candidates AS c
-    LEFT JOIN latest_fin AS f ON c.code = f.code
-    WHERE c.latest_close_raw >= {{min_price:Float64}}
-      AND c.latest_close_raw <= {{max_price:Float64}}
-      AND c.avg_amount_20d >= {{min_avg_amount_20d:Float64}}
-      AND c.price_position_3y <= {{max_price_position_3y:Float64}}
-      AND (f.debt_asset_ratio IS NULL OR f.debt_asset_ratio <= {{max_debt_asset_ratio:Float64}})
-      AND (f.roe IS NULL OR f.roe >= {{min_roe:Float64}})
-      AND positionCaseInsensitive(c.name, 'ST') = 0
-      AND position(c.name, '\u9000') = 0
+        *,
+        greatest(0, least(100, low_position_score + liquidity_score + volatility_score + fundamental_score - risk_penalty)) AS total_score
+    FROM scored
+    WHERE latest_close_raw >= {{min_price:Float64}}
+      AND latest_close_raw <= {{max_price:Float64}}
+      AND avg_amount_20d >= {{min_avg_amount_20d:Float64}}
+      AND avg_amount_60d >= {{min_avg_amount_60d:Float64}}
+      AND avg_turnover_20d >= {{min_turnover_20d:Float64}}
+      AND avg_amplitude_60d >= {{min_amplitude_60d:Float64}}
+      AND volatility_60d >= {{min_volatility_60d:Float64}}
+      AND price_position_3y <= {{max_price_position_3y:Float64}}
+      AND return_120d >= {{min_return_120d:Float64}}
+      AND return_120d <= {{max_return_120d:Float64}}
+      AND drawdown_1y <= {{max_drawdown_1y:Float64}}
+      AND consecutive_down_days <= {{max_consecutive_down_days:UInt32}}
+      AND listing_years >= {{min_listing_years:Float64}}
+      AND (debt_asset_ratio IS NULL OR debt_asset_ratio <= {{max_debt_asset_ratio:Float64}})
+      AND (roe IS NULL OR roe >= {{min_roe:Float64}})
+      AND positionCaseInsensitive(name, 'ST') = 0
+      AND position(name, '\u9000') = 0
       {positive_profit_sql}
       {positive_cash_sql}
-    ORDER BY c.price_position_3y ASC, c.avg_amount_20d DESC
+    ORDER BY total_score DESC, risk_penalty ASC, price_position_3y ASC
     LIMIT {{limit:UInt32}}
     """
     result = client.query(
@@ -85,13 +199,34 @@ def filter_candidates(params: FilterParams) -> list[dict[str, Any]]:
             "min_price": params.min_price,
             "max_price": params.max_price,
             "min_avg_amount_20d": params.min_avg_amount_20d,
+            "min_avg_amount_60d": params.min_avg_amount_60d,
+            "min_turnover_20d": params.min_turnover_20d,
+            "min_amplitude_60d": params.min_amplitude_60d,
+            "min_volatility_60d": params.min_volatility_60d,
             "max_price_position_3y": params.max_price_position_3y,
+            "min_return_120d": params.min_return_120d,
+            "max_return_120d": params.max_return_120d,
+            "max_drawdown_1y": params.max_drawdown_1y,
+            "max_consecutive_down_days": params.max_consecutive_down_days,
+            "min_listing_years": params.min_listing_years,
             "max_debt_asset_ratio": params.max_debt_asset_ratio,
             "min_roe": params.min_roe,
             "limit": params.limit,
         },
     )
-    return rows_as_dicts(result)
+    rows = rows_as_dicts(result)
+
+    picked: list[dict[str, Any]] = []
+    industry_counts: dict[str, int] = {}
+    for row in rows:
+        industry = str(row.get("industry") or "")
+        if industry:
+            count = industry_counts.get(industry, 0)
+            if count >= params.max_per_industry:
+                continue
+            industry_counts[industry] = count + 1
+        picked.append(row)
+    return picked
 
 
 def load_daily_bars(codes: list[str], start_date: str | None, end_date: str | None) -> pd.DataFrame:
