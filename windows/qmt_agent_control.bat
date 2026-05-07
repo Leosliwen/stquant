@@ -2,7 +2,8 @@
 setlocal
 
 set "PYTHON_EXE=D:\gjzqqmt\qmt_env\python.exe"
-set "AGENT_SCRIPT=D:\gjzqqmt\python_scripts\qmt_agent.py"
+set "AGENT_DIR=D:\gjzqqmt\python_scripts\qmt_agent"
+set "AGENT_SCRIPT=%AGENT_DIR%\qmt_agent.py"
 set "AGENT_URL=http://127.0.0.1:8710/health"
 
 :menu
@@ -36,7 +37,7 @@ goto menu
 
 :start_hidden
 echo Starting qmt_agent hidden...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%PYTHON_EXE%' -ArgumentList '%AGENT_SCRIPT%' -WorkingDirectory 'D:\gjzqqmt\python_scripts' -WindowStyle Hidden"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%PYTHON_EXE%' -ArgumentList '%AGENT_SCRIPT%' -WorkingDirectory '%AGENT_DIR%' -WindowStyle Hidden"
 timeout /t 2 /nobreak >nul
 goto health
 

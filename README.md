@@ -52,7 +52,7 @@ grep nameserver /etc/resolv.conf
 From Windows PowerShell:
 
 ```powershell
-cd D:\path\to\stquant\windows
+cd D:\gjzqqmt\python_scripts\qmt_agent
 D:\gjzqqmt\qmt_env\python.exe .\qmt_agent.py
 ```
 
